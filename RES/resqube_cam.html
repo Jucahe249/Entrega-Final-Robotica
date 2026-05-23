@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <title>RESQUBE CAM</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap');
+
+    :root {
+      --c-bg:      #080c0f;
+      --c-panel:   #0d1318;
+      --c-border:  #1a2a35;
+      --c-cyan:    #00e5ff;
+      --c-green:   #00ff88;
+      --c-red:     #ff2244;
+      --c-yellow:  #ffcc00;
+      --c-gray:    #3a5060;
+      --c-text:    #c8dde8;
+      --c-dim:     #4a6070;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--c-bg);
+      color: var(--c-text);
+      font-family: 'Rajdhani', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0;
+      overflow-x: hidden;
+    }
+
+    /* ── Header ── */
+    header {
+      width: 100%;
+      background: var(--c-panel);
+      border-bottom: 1px solid var(--c-border);
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 20px;
+      color: var(--c-cyan);
+      letter-spacing: 6px;
+    }
+    .logo span { color: var(--c-dim); font-size: 11px; letter-spacing: 2px; display: block; }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #0a1a20;
+      border: 1px solid var(--c-border);
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 13px;
+      font-family: 'Share Tech Mono', monospace;
+    }
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--c-gray);
+      animation: pulse 2s infinite;
+    }
+    .dot.live { background: var(--c-red); }
+    @keyframes pulse {
+      0%,100% { opacity: 1; }
+      50%      { opacity: 0.3; }
+    }
+
+    /* ── Cámara ── */
+    .cam-wrap {
+      width: 100%;
+      max-width: 700px;
+      margin: 16px auto 0;
+      padding: 0 12px;
+    }
+
+    .cam-frame {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4/3;
+      background: #050809;
+      border: 1px solid var(--c-border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    /* Esquinas estilo HUD */
+    .cam-frame::before, .cam-frame::after,
+    .cam-frame .corner-br, .cam-frame .corner-bl {
+      content: '';
+      position: absolute;
+      width: 20px; height: 20px;
+      border-color: var(--c-cyan);
+      border-style: solid;
+      z-index: 10;
+    }
+    .cam-frame::before  { top:8px;    left:8px;   border-width: 2px 0 0 2px; }
+    .cam-frame::after   { top:8px;    right:8px;  border-width: 2px 2px 0 0; }
+    .cam-frame .corner-br { bottom:8px; right:8px; border-width: 0 2px 2px 0; }
+    .cam-frame .corner-bl { bottom:8px; left:8px;  border-width: 0 0 2px 2px; }
+
+    .cam-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .cam-overlay-tl {
+      position: absolute;
+      top: 16px; left: 16px;
+      display: flex; align-items: center; gap: 6px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      color: var(--c-red);
+      z-index: 11;
+    }
+    .rec-dot {
+      width: 7px; height: 7px;
+      background: var(--c-red);
+      border-radius: 50%;
+      animation: pulse 1s infinite;
+    }
+
+    .cam-overlay-br {
+      position: absolute;
+      bottom: 16px; right: 16px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      color: var(--c-dim);
+      z-index: 11;
+    }
+
+    .cam-no-signal {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: var(--c-dim);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 13px;
+    }
+    .cam-no-signal .icon { font-size: 36px; opacity: 0.3; }
+
+    /* ── Info bar ── */
+    .info-bar {
+      width: 100%;
+      max-width: 700px;
+      margin: 10px auto 0;
+      padding: 0 12px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+
+    .info-cell {
+      background: var(--c-panel);
+      border: 1px solid var(--c-border);
+      border-radius: 4px;
+      padding: 8px 12px;
+      text-align: center;
+    }
+    .info-cell .label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px;
+      color: var(--c-dim);
+      letter-spacing: 2px;
+      margin-bottom: 3px;
+    }
+    .info-cell .value {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--c-cyan);
+    }
+
+    /* ── Panel modo ── */
+    .panel {
+      width: 100%;
+      max-width: 700px;
+      margin: 10px auto 0;
+      padding: 0 12px;
+    }
+
+    .modo-wrap {
+      background: var(--c-panel);
+      border: 1px solid var(--c-border);
+      border-radius: 4px;
+      padding: 14px 16px;
+    }
+    .modo-title {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      color: var(--c-dim);
+      letter-spacing: 3px;
+      margin-bottom: 10px;
+    }
+    .modo-btns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .btn-modo {
+      padding: 12px;
+      border: 1px solid var(--c-border);
+      border-radius: 4px;
+      background: transparent;
+      color: var(--c-dim);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-modo:hover {
+      border-color: var(--c-cyan);
+      color: var(--c-cyan);
+    }
+    .btn-modo.activo {
+      background: #001e28;
+      border-color: var(--c-cyan);
+      color: var(--c-cyan);
+    }
+    .btn-modo.activo-auto {
+      background: #1a1400;
+      border-color: var(--c-yellow);
+      color: var(--c-yellow);
+    }
+
+    /* ── Alerta ── */
+    .alerta-bar {
+      width: 100%;
+      max-width: 700px;
+      margin: 10px auto 0;
+      padding: 0 12px;
+      display: none;
+    }
+    .alerta-bar.visible { display: block; }
+    .alerta-inner {
+      background: #1a0008;
+      border: 1px solid var(--c-red);
+      border-radius: 4px;
+      padding: 10px 16px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 13px;
+      color: var(--c-red);
+      text-align: center;
+      letter-spacing: 3px;
+      animation: pulse 0.5s infinite;
+    }
+
+    /* ── Config cámara ── */
+    .cam-config {
+      width: 100%;
+      max-width: 700px;
+      margin: 10px auto 16px;
+      padding: 0 12px;
+    }
+    .cam-config-inner {
+      background: var(--c-panel);
+      border: 1px solid var(--c-border);
+      border-radius: 4px;
+      padding: 12px 16px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .cam-config label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      color: var(--c-dim);
+      letter-spacing: 2px;
+      white-space: nowrap;
+    }
+    .cam-config input {
+      flex: 1;
+      background: #050809;
+      border: 1px solid var(--c-border);
+      border-radius: 3px;
+      color: var(--c-cyan);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 13px;
+      padding: 6px 10px;
+      outline: none;
+    }
+    .cam-config input:focus { border-color: var(--c-cyan); }
+    .btn-connect {
+      background: #001e28;
+      border: 1px solid var(--c-cyan);
+      border-radius: 3px;
+      color: var(--c-cyan);
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      padding: 6px 14px;
+      cursor: pointer;
+      letter-spacing: 1px;
+    }
+    .btn-connect:hover { background: var(--c-cyan); color: #000; }
+
+    /* ── ROS bridge status ── */
+    .ros-bar {
+      width: 100%;
+      max-width: 700px;
+      margin: 0 auto 8px;
+      padding: 0 12px;
+    }
+    .ros-inner {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      color: var(--c-dim);
+    }
+    .ros-inner input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--c-border);
+      color: var(--c-dim);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      padding: 2px 4px;
+      outline: none;
+    }
+
+    /* clock */
+    #clock {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      color: var(--c-dim);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="logo">RESQUBE<span>RESCUE ROBOT SYSTEM</span></div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <span id="clock">00:00:00</span>
+      <div class="status-pill">
+        <div class="dot live" id="camDot"></div>
+        <span id="camStatus">SIN SEÑAL</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Cámara -->
+  <div class="cam-wrap">
+    <div class="cam-frame" id="camFrame">
+      <div class="corner-br"></div>
+      <div class="corner-bl"></div>
+      <div class="cam-overlay-tl">
+        <div class="rec-dot"></div>
+        LIVE
+      </div>
+      <div class="cam-overlay-br" id="camIP">---.---.---.---</div>
+      <div class="cam-no-signal" id="noSignal">
+        <div class="icon">📷</div>
+        SIN SEÑAL DE CÁMARA<br>
+        <span style="font-size:10px;margin-top:4px">Ingresa la IP de la ESP32-CAM</span>
+      </div>
+      <img id="camImg" src="" alt="" style="display:none"
+           onload="onCamLoad()" onerror="onCamError()">
+    </div>
+  </div>
+
+  <!-- Alerta -->
+  <div class="alerta-bar" id="alertaBar">
+    <div class="alerta-inner">⚠ OBJETO DETECTADO ⚠</div>
+  </div>
+
+  <!-- Info bar -->
+  <div class="info-bar">
+    <div class="info-cell">
+      <div class="label">ESTADO</div>
+      <div class="value" id="infoEstado">--</div>
+    </div>
+    <div class="info-cell">
+      <div class="label">MODO</div>
+      <div class="value" id="infoModo">--</div>
+    </div>
+    <div class="info-cell">
+      <div class="label">BRIDGE</div>
+      <div class="value" id="infoBridge" style="color:var(--c-gray)">OFF</div>
+    </div>
+  </div>
+
+  <!-- Modo -->
+  <div class="panel">
+    <div class="modo-wrap">
+      <div class="modo-title">MODO DE OPERACIÓN</div>
+      <div class="modo-btns">
+        <button class="btn-modo activo" id="btnRemoto"
+          onclick="cambiarModo('REMOTO')">REMOTO</button>
+        <button class="btn-modo" id="btnAuto"
+          onclick="cambiarModo('AUTONOMO')">AUTÓNOMO</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Config cámara -->
+  <div class="cam-config">
+    <div class="cam-config-inner">
+      <label>CAM IP</label>
+      <input type="text" id="inputCamIP"
+             placeholder="192.168.x.x"
+             value="">
+      <button class="btn-connect" onclick="conectarCam()">CONECTAR</button>
+    </div>
+  </div>
+
+  <!-- ROS bridge (opcional) -->
+  <div class="ros-bar">
+    <div class="ros-inner">
+      BRIDGE:
+      <input type="text" id="inputBridgeIP"
+             placeholder="ws://192.168.251.131:8080"
+             value="ws://192.168.251.131:8080">
+      <button class="btn-connect" style="font-size:10px;padding:3px 10px"
+        onclick="conectarBridge()">OK</button>
+    </div>
+  </div>
+
+  <script>
+    // ── Reloj ──
+    function updateClock() {
+      var d = new Date();
+      document.getElementById('clock').textContent =
+        d.toTimeString().slice(0,8);
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // ── Cámara ──
+    var camConectada = false;
+
+    function conectarCam() {
+      var ip = document.getElementById('inputCamIP').value.trim();
+      if (!ip) return;
+      var url = 'http://' + ip + '/stream';
+      document.getElementById('camImg').src = url;
+      document.getElementById('camIP').textContent = ip;
+    }
+
+    function onCamLoad() {
+      camConectada = true;
+      document.getElementById('noSignal').style.display = 'none';
+      document.getElementById('camImg').style.display   = 'block';
+      document.getElementById('camDot').className = 'dot live';
+      document.getElementById('camStatus').textContent  = 'EN VIVO';
+    }
+
+    function onCamError() {
+      camConectada = false;
+      document.getElementById('noSignal').style.display = 'flex';
+      document.getElementById('camImg').style.display   = 'none';
+      document.getElementById('camDot').className = 'dot';
+      document.getElementById('camStatus').textContent  = 'SIN SEÑAL';
+    }
+
+    // ── Bridge ROS2 (opcional via WebSocket) ──
+    var ws = null;
+
+    function conectarBridge() {
+      var url = document.getElementById('inputBridgeIP').value.trim();
+      if (ws) ws.close();
+      try {
+        ws = new WebSocket(url);
+        ws.onopen = function() {
+          document.getElementById('infoBridge').textContent = 'ON';
+          document.getElementById('infoBridge').style.color = 'var(--c-green)';
+        };
+        ws.onclose = function() {
+          document.getElementById('infoBridge').textContent = 'OFF';
+          document.getElementById('infoBridge').style.color = 'var(--c-gray)';
+        };
+        ws.onmessage = function(e) {
+          try {
+            var d = JSON.parse(e.data);
+            if (d.estado)  document.getElementById('infoEstado').textContent = d.estado;
+            if (d.modo)    actualizarModo(d.modo);
+            if (d.alerta !== undefined) {
+              document.getElementById('alertaBar').className =
+                'alerta-bar' + (d.alerta ? ' visible' : '');
+            }
+          } catch(err) {}
+        };
+      } catch(err) {
+        console.log('Bridge no disponible:', err);
+      }
+    }
+
+    // ── Modo ──
+    function cambiarModo(m) {
+      actualizarModo(m);
+      if (ws && ws.readyState === 1) {
+        ws.send(JSON.stringify({tipo:'modo', data: m}));
+      }
+    }
+
+    function actualizarModo(m) {
+      document.getElementById('infoModo').textContent = m;
+      var btnR = document.getElementById('btnRemoto');
+      var btnA = document.getElementById('btnAuto');
+      if (m === 'REMOTO') {
+        btnR.className = 'btn-modo activo';
+        btnA.className = 'btn-modo';
+      } else {
+        btnR.className = 'btn-modo';
+        btnA.className = 'btn-modo activo-auto';
+      }
+    }
+
+    // Intentar bridge al cargar
+    setTimeout(conectarBridge, 500);
+  </script>
+</body>
+</html>
