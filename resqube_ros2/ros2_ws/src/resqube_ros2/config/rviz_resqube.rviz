@@ -1,0 +1,17 @@
+Panels:
+  - Class: rviz_common/Displays
+  - Class: rviz_common/Views
+Visualization Manager:
+  Displays:
+    - Class: rviz_default_plugins/LaserScan
+      Name: Scan Sharp
+      Topic:
+        Value: /scan
+      Color: 255; 50; 0
+      Size (m): 0.05
+    - Class: rviz_default_plugins/Odometry
+      Name: Odometría
+      Topic:
+        Value: /odom
+  Global Options:
+    Fixed Frame: odom
